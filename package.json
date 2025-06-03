@@ -1,6 +1,6 @@
 {
-  "name": "@snapshot-labs/strategies",
-  "version": "0.1.0",
+  "name": "@d10r/snapshot-strategies",
+  "version": "0.1.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -9,7 +9,10 @@
   "files": [
     "dist"
   ],
-  "repository": "snapshot-labs/snapshot-strategies",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/d10r/snapshot-strategies"
+  },
   "license": "MIT",
   "scripts": {
     "build": "tsc -p .",
@@ -18,7 +21,6 @@
     "test:delegation": "jest -i delegation.test.ts",
     "test:validation": "jest -i validation.test.ts",
     "prepublishOnly": "npm run build",
-    "postinstall": "npm run build",
     "postbuild": "copyfiles -u 1 \"src/**/*.md\" dist/ && copyfiles -u 1 \"src/**/*.json\" dist/",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/ test/ --ext .ts,.json",
