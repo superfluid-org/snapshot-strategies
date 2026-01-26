@@ -1,3 +1,21 @@
+# About this fork
+
+This was originally an unmodified fork of https://github.com/snapshot-labs/snapshot-strategies.
+All we needed was the package to be published on npm so we can use snapshot strategies in our applications (e.g. in https://github.com/superfluid-org/sup-metrics-api) without relying on the Score API (and its rate limits).
+
+The upstream snapshot-strategies repository was later archived an merged into https://github.com/snapshot-labs/score-api .
+This project wasn't set up such that if published to npm, the functionality we wanted worked out of the box.
+Specifically, we want something like
+```
+import snapshotStrategies from '@d10r/snapshot-strategies';
+
+...
+const chunkScores = await snapshotStrategies.utils.getScoresDirect(...);
+...
+```
+
+Thus this fork now tracks the upstream scores-api repository, but with small modifications to `package.json` and `tsconfig.json` which result in the published npm package to expose the strategy relation functionality as before.
+
 # Snapshot Score API
 The Score API is a simple RESTful API that calculates scores for various strategies based on the Snapshot protocol. This README outlines the functionality provided by the API and how to use it without any specific code examples.
 
