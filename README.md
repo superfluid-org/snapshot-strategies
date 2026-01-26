@@ -14,7 +14,9 @@ const chunkScores = await snapshotStrategies.utils.getScoresDirect(...);
 ...
 ```
 
-Thus this fork now tracks the upstream scores-api repository, but with small modifications to `package.json` and `tsconfig.json` which result in the published npm package to expose the strategy relation functionality as before.
+Thus this fork now tracks the upstream scores-api repository, but with small **modifications**:
+- `package.json` and `tsconfig.json`: for the published npm package to expose the strategy relation functionality as before
+- `src/strategies/utils.ts`: use the RPC provider specified by the caller instead of the default one
 
 # Snapshot Score API
 The Score API is a simple RESTful API that calculates scores for various strategies based on the Snapshot protocol. This README outlines the functionality provided by the API and how to use it without any specific code examples.

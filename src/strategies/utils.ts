@@ -12,6 +12,7 @@ export function sha256(str) {
 async function callStrategy(
   space: string,
   network,
+  provider,
   addresses: string[],
   strategy,
   snapshot: Snapshot
@@ -26,7 +27,7 @@ async function callStrategy(
   const score: Score = await _strategies[strategy.name].strategy(
     space,
     network,
-    getProvider(network),
+    provider,
     addresses,
     strategy.params,
     snapshot
@@ -64,15 +65,19 @@ export async function getScoresDirect(
     const snapshots = await getSnapshots(network, snapshot, provider, networks);
 
     return await Promise.all(
-      strategies.map(strategy =>
-        callStrategy(
+      strategies.map(strategy => {
+        const strategyNetwork = strategy.network || network;
+        const strategyProvider =
+          strategyNetwork === network ? provider : getProvider(strategyNetwork);
+        return callStrategy(
           space,
-          strategy.network || network,
+          strategyNetwork,
+          strategyProvider,
           filterAddressesForStrategy(addressesByProtocol, strategy.name),
           strategy,
           snapshots[strategy.network || network]
-        )
-      )
+        );
+      })
     );
   } catch (e) {
     return Promise.reject(e);
