@@ -20,7 +20,24 @@ const abi = [
 const DECIMALS = 18;
 
 // we must bound the number of fontaines per locker to avoid RPC timeouts
-const MAX_FONTAINES_PER_LOCKER = 100;
+const MAX_FONTAINES_PER_LOCKER = 1024;
+
+/**
+ * Newest-first fontaine slot indices to load and score. Must be used consistently
+ * for fontaines() multicall, balanceOf multicall, and summing — otherwise slots
+ * not fetched end up as undefined and ethers throws on balanceOf(undefined).
+ */
+function cappedFontaineIndicesDescending(
+  fontaineCount: number,
+  maxPerLocker: number = MAX_FONTAINES_PER_LOCKER
+): number[] {
+  const start = Math.max(0, fontaineCount - maxPerLocker);
+  const indices: number[] = [];
+  for (let i = fontaineCount - 1; i >= start; i--) {
+    indices.push(i);
+  }
+  return indices;
+}
 
 const UNISWAP_V3_SUBGRAPH_URL = {
   '1': 'https://subgrapher.snapshot.org/subgraph/arbitrum/5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV',
@@ -34,6 +51,7 @@ interface LockerState {
   availableBalance: BigNumber;
   stakedBalance: BigNumber;
   fontaineCount: number;
+  fontaineIndices: number[];
 }
 
 export async function strategy(
@@ -88,6 +106,9 @@ export async function strategy(
   // Transform raw results into structured data
   const lockerStates: Record<string, LockerState> = {};
   existingLockers.forEach(lockerAddress => {
+    const fontaineCount = Number(
+      mCall3Result[`fontaineCount-${lockerAddress}`]
+    );
     lockerStates[lockerAddress] = {
       availableBalance: BigNumber.from(
         mCall3Result[`available-${lockerAddress}`] || 0
@@ -95,21 +116,17 @@ export async function strategy(
       stakedBalance: BigNumber.from(
         mCall3Result[`staked-${lockerAddress}`] || 0
       ),
-      fontaineCount: Number(mCall3Result[`fontaineCount-${lockerAddress}`])
+      fontaineCount,
+      fontaineIndices: cappedFontaineIndicesDescending(fontaineCount)
     };
   });
 
   // 3. GET ALL THE FONTAINES
   const mCall4 = new Multicaller(network, provider, abi, { blockTag });
   existingLockers.forEach(lockerAddress => {
-    const fontaineCount = lockerStates[lockerAddress].fontaineCount;
     // iterate backwards, so we have fontaines ordered by creation time (most recent first).
     // this makes it unlikely to miss fontaines which are still active.
-    for (
-      let i = fontaineCount - 1;
-      i >= 0 && i >= fontaineCount - MAX_FONTAINES_PER_LOCKER;
-      i--
-    ) {
+    for (const i of lockerStates[lockerAddress].fontaineIndices) {
       mCall4.call(`${lockerAddress}-${i}`, lockerAddress, 'fontaines', [i]);
     }
   });
@@ -123,8 +140,15 @@ export async function strategy(
     ])
   );
   existingLockers.forEach(lockerAddress => {
-    for (let i = 0; i < lockerStates[lockerAddress].fontaineCount; i++) {
+    const { fontaineCount, fontaineIndices } = lockerStates[lockerAddress];
+    for (const i of fontaineIndices) {
       const fontaineAddress = fontaineAddrs[`${lockerAddress}-${i}`];
+      if (!fontaineAddress) {
+        console.warn(
+          `[fountainhead] missing fontaine address for locker ${lockerAddress} at index ${i}; skipping balanceOf call (fontaineCount=${fontaineCount}, capped=${fontaineIndices.length})`
+        );
+        continue;
+      }
       mCall5.call(
         `fontaine-${lockerAddress}-${i}`,
         options.tokenAddress,
@@ -227,8 +251,8 @@ export async function strategy(
       const stakedBalance = lockerStates[lockerAddress].stakedBalance;
       const fontaineBalanceSum = getFontaineBalancesForLocker(
         lockerAddress,
-        lockerStates[lockerAddress].fontaineCount,
-        fontaineBalances
+        fontaineBalances,
+        lockerStates[lockerAddress].fontaineIndices
       );
 
       const uniswapV3Balance = parseUnits(
@@ -258,10 +282,11 @@ export async function strategy(
 // helper function to sum up the fontaine balances for a given locker
 function getFontaineBalancesForLocker(
   lockerAddress: string,
-  fontaineCount: number,
-  balances: Record<string, BigNumberish>
+  balances: Record<string, BigNumberish>,
+  indices: number[]
 ): BigNumber {
-  return Array.from({ length: fontaineCount })
-    .map((_, i) => BigNumber.from(balances[`${lockerAddress}-${i}`] || 0))
-    .reduce((sum, balance) => sum.add(balance), BigNumber.from(0));
+  return indices.reduce(
+    (sum, i) => sum.add(BigNumber.from(balances[`${lockerAddress}-${i}`] || 0)),
+    BigNumber.from(0)
+  );
 }
