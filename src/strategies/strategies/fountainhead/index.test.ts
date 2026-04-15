@@ -157,12 +157,15 @@ describe('fountainhead strategy (mocked multicall)', () => {
     );
 
     const mCall5 = multicallerInstances[3];
-    const fontaineBalanceCalls = mCall5.call.mock.calls.filter((c: unknown[]) =>
-      String(c[0]).startsWith('fontaine-')
+    type MockCallArgs = [string, string, string, unknown[]];
+    const fontaineBalanceCalls = mCall5.call.mock.calls.filter(
+      (c: MockCallArgs) => String(c[0]).startsWith('fontaine-')
     );
 
     expect(fontaineBalanceCalls).toHaveLength(1023);
-    expect(fontaineBalanceCalls.some((c: unknown[]) => !c[3][0])).toBe(false);
+    expect(fontaineBalanceCalls.some((c: MockCallArgs) => !c[3]?.[0])).toBe(
+      false
+    );
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining(
         'missing fontaine address for locker 0x2222222222222222222222222222222222222222 at index 1499'

@@ -1,6 +1,6 @@
 {
   "name": "@d10r/snapshot-strategies",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "license": "MIT",
   "main": "build/src/strategies/index.js",
   "types": "build/src/strategies/index.d.ts",
@@ -12,7 +12,7 @@
     "lint": "eslint src/ test/ --ext .ts",
     "lint:fix": "yarn lint --fix",
     "typecheck": "tsc --noEmit",
-    "build": "tsc",
+    "build": " rm -r build && tsc",
     "postbuild": "copyfiles -u 0 \"src/**/*.md\" build/ && copyfiles -u 0 \"src/**/*.json\" build/",
     "dev": "nodemon src/index.ts",
     "start": "node build/src/index.js",
